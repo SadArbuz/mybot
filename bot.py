@@ -72,12 +72,17 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def arbuz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Я❤️Арбуза")
 
+# ❤️ владелец
+async def ovner(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("овелкэодмэн я❤️тебя")
+
 # 🚀 запуск бота
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
+app.add_handler(CommandHandler("ovner", ovner))
 
 threading.Thread(target=run_web).start()
 
