@@ -1,8 +1,17 @@
 import os
 import threading
 from flask import Flask
+
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
+from telegram.constants import ChatPermissions
+
 from groq import Groq
 
 # =========================
@@ -12,7 +21,7 @@ TOKEN = os.getenv("TOKEN")
 GROQ_KEY = os.getenv("GROQ_KEY")
 
 # =========================
-# 🌐 FLASK SERVER
+# 🌐 FLASK SERVER (Render)
 # =========================
 web_app = Flask(__name__)
 
@@ -21,7 +30,7 @@ def home():
     return "Bot is alive"
 
 # =========================
-# 🤖 AI CLIENT
+# 🤖 GROQ AI CLIENT
 # =========================
 client = Groq(api_key=GROQ_KEY)
 
@@ -43,7 +52,8 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         )
 
-        await update.message.reply_text(response.choices[0].message.content)
+        answer = response.choices[0].message.content
+        await update.message.reply_text(answer)
 
     except Exception as e:
         await update.message.reply_text(f"Ошибка ИИ: {e}")
@@ -75,39 +85,69 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
-# 🍉 /arbuz
+# 🍉 /arbuz COMMAND
 # =========================
 async def arbuz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Я❤️Арбуза")
 
 # =========================
-# 👑 /ovner
+# 👑 /ovner COMMAND
 # =========================
 async def ovner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("овелкэодмэн я❤️тебя")
 
 # =========================
-# BOT SETUP
+# 🚫 AUTO MUTE SYSTEM
+# =========================
+BAD_TRIGGER = "@dsweroo"
+
+async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.lower()
+    user_id = update.message.from_user.id
+    chat_id = update.message.chat_id
+
+    if BAD_TRIGGER in text:
+        try:
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=ChatPermissions(
+                    can_send_messages=False
+                )
+            )
+
+            await update.message.reply_text(
+                "🚫 Пользователь получил мут за запрещённое слово."
+            )
+
+        except Exception as e:
+            await update.message.reply_text(f"Ошибка мутa: {e}")
+
+# =========================
+# 🤖 BOT SETUP
 # =========================
 app = Application.builder().token(TOKEN).build()
 
+# commands
 app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
 app.add_handler(CommandHandler("ovner", ovner))
 
+# auto mute handler
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+
 print("🤖 Bot started")
 
 # =========================
-# RUN
+# 🚀 RUN (Render friendly)
 # =========================
 if __name__ == "__main__":
-    import asyncio
+    threading.Thread(
+        target=lambda: web_app.run(host="0.0.0.0", port=10000)
+    ).start()
 
-    def run_flask():
-        web_app.run(host="0.0.0.0", port=10000)
-
-    threading.Thread(target=run_flask).start()
-
-    print("🤖 Bot is running...")
     app.run_polling(drop_pending_updates=True)
