@@ -10,7 +10,7 @@ from telegram.ext import (
     MessageHandler,
     filters
 )
-from telegram.constants import ChatPermissions
+from telegram import ChatPermissions
 
 from groq import Groq
 
