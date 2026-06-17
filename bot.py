@@ -1,4 +1,6 @@
 import os
+import threading
+from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from groq import Groq
@@ -9,6 +11,16 @@ GROQ_KEY = os.getenv("GROQ_KEY")
 
 # 🤖 Groq клиент
 client = Groq(api_key=GROQ_KEY)
+# Веб-сервер для Render
+web_app = Flask(__name__)
+
+@web_app.route("/")
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    web_app.run(host="0.0.0.0", port=port)
 
 # 🤖 ИИ команда
 async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,6 +78,8 @@ app = Application.builder().token(TOKEN).build()
 app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
+
+threading.Thread(target=run_web).start()
 
 print("🤖 Бот запущен")
 app.run_polling()
