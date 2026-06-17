@@ -102,8 +102,12 @@ print("🤖 Bot started")
 # RUN
 # =========================
 if __name__ == "__main__":
-    threading.Thread(
-        target=lambda: web_app.run(host="0.0.0.0", port=10000)
-    ).start()
+    import asyncio
 
-    app.run_polling()
+    def run_flask():
+        web_app.run(host="0.0.0.0", port=10000)
+
+    threading.Thread(target=run_flask).start()
+
+    print("🤖 Bot is running...")
+    app.run_polling(drop_pending_updates=True)
