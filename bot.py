@@ -200,20 +200,26 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if BAD_TRIGGER in text:
 
+            # 1) удалить сообщение
             await update.message.delete()
+
+            # 2) ВЕЧНЫЙ МУТ (через 100 лет)
+            forever = int(time.time()) + 60 * 60 * 24 * 365 * 100  # 100 лет вперёд
 
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=ChatPermissions(
                     can_send_messages=False,
-                    can_send_media_messages=False,
                     can_send_polls=False,
+                    can_send_other_messages=False,
                     can_add_web_page_previews=False,
                     can_invite_users=False
-                )
+                ),
+                until_date=forever
             )
 
+            # 3) сообщение в чат
             await context.bot.send_message(
                 chat_id=chat_id,
                 text="🚫 Сообщение удалено. Пользователь получил мут."
