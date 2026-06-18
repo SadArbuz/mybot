@@ -65,13 +65,14 @@ client = Groq(api_key=GROQ_KEY)
 
 def normalize(text: str):
     text = text.lower()
-    text = re.sub(r"\s+", "", text)      # убираем пробелы
-    text = re.sub(r"[^\wа-я]", "", text) # убираем символы, но сохраняем буквы/цифры
+    text = re.sub(r"[^\wа-я0-9]", "", text)
     return text
 
 # =========================
 # 🤖 /ai COMMAND
 # =========================
+import asyncio  # если ещё не добавил сверху файла
+
 async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = " ".join(context.args)
 
@@ -80,13 +81,19 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": text}],
-            timeout=20
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                client.chat.completions.create,
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": text}],
+            ),
+            timeout=15
         )
 
         await update.message.reply_text(response.choices[0].message.content)
+
+    except asyncio.TimeoutError:
+        await update.message.reply_text("⏳ AI не успел ответить за 15 секунд")
 
     except Exception as e:
         await update.message.reply_text(f"Ошибка ИИ: {e}")
