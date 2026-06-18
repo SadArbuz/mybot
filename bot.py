@@ -3,6 +3,8 @@ import threading
 import requests
 import time
 import re
+import asyncio
+COOLDOWN = 15
 
 from flask import Flask
 from telegram import Update, ChatPermissions
@@ -69,60 +71,98 @@ def normalize(text: str):
     return text
 
 # =========================
+# 🤖 AI COOLDOWN SYSTEM
+# =========================
+user_cooldown = {}
+COOLDOWN = 15
+COOLDOWN_LIFETIME = 60  # через сколько удалять запись
+
+def clean_cooldowns():
+    now = time.time()
+    to_delete = []
+
+    for user_id, last_time in user_cooldown.items():
+        if now - last_time > COOLDOWN_LIFETIME:
+            to_delete.append(user_id)
+
+    for user_id in to_delete:
+        del user_cooldown[user_id]
+
+
+# =========================
 # 🤖 /ai COMMAND
 # =========================
-import asyncio  # если ещё не добавил сверху файла
-
 async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = " ".join(context.args)
+    clean_cooldowns()
+
+    if not update.message:
+        return
+
+    user = update.effective_user
+    if not user:
+        return
+
+    user_id = user.id
+    now = time.time()
+
+    # cooldown check per user
+    last_used = user_cooldown.get(user_id)
+
+    if last_used and (now - last_used < COOLDOWN):
+        remaining = int(COOLDOWN - (now - last_used))
+        await update.message.reply_text(
+            f"⏳ Подожди {remaining} сек перед следующим запросом"
+        )
+        return
+
+    user_cooldown[user_id] = now
+
+    text = " ".join(context.args).strip()
 
     if not text:
         await update.message.reply_text("Напиши так: /ai привет")
         return
 
     try:
-        response = await asyncio.wait_for(
-            asyncio.to_thread(
-                client.chat.completions.create,
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": text}],
-            ),
-            timeout=15
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "user", "content": text}
+            ],
         )
 
-        await update.message.reply_text(response.choices[0].message.content)
-
-    except asyncio.TimeoutError:
-        await update.message.reply_text("⏳ AI не успел ответить за 15 секунд")
+        answer = response.choices[0].message.content
+        await update.message.reply_text(answer)
 
     except Exception as e:
-        await update.message.reply_text(f"Ошибка ИИ: {e}")
+        await update.message.reply_text(f"❌ Ошибка ИИ: {e}")
 
 # =========================
 # 📜 /rules COMMAND (ТВОИ ПРАВИЛА 1 В 1)
 # =========================
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📌 ПРАВИЛА ЧАТА RED DEAD REDEMPTION 2 FANDOM CHAT 📌\n\n"
-        "1. Запрещается спам в любом виде.\n"
-        "Наказание — мут\n\n"
-        "2. Запрещается 18+ контент\n"
-        "Наказание — бан без права разбана\n\n"
-        "3. Оскорбления запрещены\n"
-        "Наказание — мут\n\n"
-        "4. Оскорбления админов запрещены\n"
-        "Наказание — мут/бан\n\n"
-        "5. Реклама запрещена\n"
-        "Наказание — бан\n\n"
-        "6. Треш-контент запрещён\n"
-        "Наказание — бан\n\n"
-        "7. Не выпрашивать админку\n"
-        "Наказание — мут\n\n"
-        "8. Запрещено использование юзера владельца (упоминание, тег, спам)\n"
-        "Наказание — мут/бан\n\n"
-        "📌 В случае бана можно попросить разбан 1 раз,\n"
-        "разбан действует всегда, кроме пунктов 2, 4 и 5, а также при серьёзных или массовых нарушениях."
-    )
+    "📌 Правила чата Red Dead Redemption 2 fandom chat 🇷🇺📌\n\n"
+    "1. Запрещается спам в любом виде. \n"
+    "Наказание — Мут (время зависит от ситуации)\n\n"
+    "2. Запрещается порно/расчлененка\n"
+    "Наказание — Бан (без права разбана)\n\n"
+    "3. Запрещается оскорбление религии, семьи, нации\n"
+    "Наказание — Мут ( время зависит от ситуации)\n\n"
+    "4. Запрещается оскорбление админов ( легкие, шуточные не учитываются)\n"
+    "Наказание — Мут/Бан (зависит от ситуации)\n\n"
+    "5. Запрещается реклама (в любом виде) без согласования с владельцем чата \n"
+    "Наказание — Бан\n\n"
+    "6. Запрещается отправка треш кружочков (не стоит отправлять расчлененку илм свои/чужие гениталии)\n"
+    "Наказние — Бан (в редких случаях мут)\n\n"
+    "7. Не рекомендуется выпрашивать админку у администрации\n"
+    "Наказание — 5 предупреждений в виде мута, после бан на определенный срок\n\n"
+    "8. Запрещается отправка юза владельца чата.\n"
+    "Наказание — Мут/Бан (зависит от ситуации)\n\n"
+    "\nВ случаи бана одного из участников, его друзья могут попросить разбана только 1 раз при условии, что участник получивший бан не будет повторять своих ошибок\n\n"
+    "(правило работает всегда кроме пунктов: 2;5;6)"
+)
 
 # =========================
 # 🍉 /arbuz COMMAND
