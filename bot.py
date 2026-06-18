@@ -4,7 +4,7 @@ import requests
 import time
 import re
 import asyncio
-COOLDOWN = 15
+COOLDOWN = 40
 
 from flask import Flask
 from telegram import Update, ChatPermissions
@@ -74,7 +74,7 @@ def normalize(text: str):
 # 🤖 AI COOLDOWN SYSTEM
 # =========================
 user_cooldown = {}
-COOLDOWN = 15
+COOLDOWN = 40
 COOLDOWN_LIFETIME = 60  # через сколько удалять запись
 
 def clean_cooldowns():
