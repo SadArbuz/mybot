@@ -177,6 +177,14 @@ async def ovner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("овелкэодмэн я❤️тебя")
 
 # =========================
+# 🎬 /z VIDEO COMMAND
+# =========================
+async def z(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_video(
+        video=open("video_2026-06-18_21-17-27.mp4", "rb")
+    )
+
+# =========================
 # 🚫 AUTO MODERATION
 # =========================
 BAD_TRIGGER = "dsweroo"
@@ -226,6 +234,7 @@ app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
 app.add_handler(CommandHandler("ovner", ovner))
+app.add_handler(CommandHandler("z", z))
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
