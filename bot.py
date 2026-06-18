@@ -1,7 +1,10 @@
 import os
 import threading
-from flask import Flask
+import requests
+import time
+import re
 
+from flask import Flask
 from telegram import Update, ChatPermissions
 from telegram.ext import (
     Application,
@@ -18,9 +21,17 @@ from groq import Groq
 # =========================
 TOKEN = os.getenv("TOKEN")
 GROQ_KEY = os.getenv("GROQ_KEY")
+RENDER_URL = os.getenv("RENDER_URL")
+if not RENDER_URL:
+    print("⚠️ WARNING: RENDER_URL is not set (keep-alive will not work)")
+
+if not TOKEN:
+    raise ValueError("TOKEN is not set")
+if not GROQ_KEY:
+    raise ValueError("GROQ_KEY is not set")
 
 # =========================
-# 🌐 FLASK (Render alive check)
+# 🌐 FLASK (KEEP ALIVE SERVER)
 # =========================
 web_app = Flask(__name__)
 
@@ -28,10 +39,35 @@ web_app = Flask(__name__)
 def home():
     return "Bot is alive"
 
+def run_web():
+    web_app.run(
+        host="0.0.0.0",
+        port=10000,
+        debug=False,
+        use_reloader=False
+    )
+
+def keep_alive_ping():
+    while True:
+        try:
+            if RENDER_URL:
+                requests.get(RENDER_URL, timeout=10)
+                print("🔄 Keep-alive ping sent")
+        except Exception as e:
+            print(f"Ping error: {e}")
+
+        time.sleep(240)
+
 # =========================
-# 🤖 AI CLIENT
+# 🤖 GROQ AI CLIENT
 # =========================
 client = Groq(api_key=GROQ_KEY)
+
+def normalize(text: str):
+    text = text.lower()
+    text = re.sub(r"\s+", "", text)      # убираем пробелы
+    text = re.sub(r"[^\wа-я]", "", text) # убираем символы, но сохраняем буквы/цифры
+    return text
 
 # =========================
 # 🤖 /ai COMMAND
@@ -46,9 +82,8 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "user", "content": text}
-            ]
+            messages=[{"role": "user", "content": text}],
+            timeout=20
         )
 
         await update.message.reply_text(response.choices[0].message.content)
@@ -57,7 +92,7 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Ошибка ИИ: {e}")
 
 # =========================
-# 📜 /rules COMMAND
+# 📜 /rules COMMAND (ТВОИ ПРАВИЛА 1 В 1)
 # =========================
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -83,34 +118,32 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
-# 🍉 /arbuz
+# 🍉 /arbuz COMMAND
 # =========================
 async def arbuz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Я❤️Арбуза")
 
 # =========================
-# 👑 /ovner
+# 👑 /ovner COMMAND
 # =========================
 async def ovner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("овелкэодмэн я❤️тебя")
 
 # =========================
-# 🚫 AUTO MODERATION (DELETE + MUTE)
+# 🚫 AUTO MODERATION
 # =========================
-OWNER_TRIGGER = "@owner"
-BAD_TRIGGER = "@dsweroo"
+BAD_TRIGGER = "dsweroo"
 
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    text = update.message.text.lower()
+    text = normalize(update.message.text)
+    chat_id = update.effective_chat.id
     user_id = update.message.from_user.id
-    chat_id = update.message.chat_id
 
     try:
-        # ❌ УДАЛЕНИЕ СООБЩЕНИЯ (если триггер найден)
-        if BAD_TRIGGER in text or OWNER_TRIGGER in text:
+        if BAD_TRIGGER in text:
 
             await update.message.delete()
 
@@ -118,7 +151,11 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=ChatPermissions(
-                    can_send_messages=False
+                    can_send_messages=False,
+                    can_send_media_messages=False,
+                    can_send_polls=False,
+                    can_add_web_page_previews=False,
+                    can_invite_users=False
                 )
             )
 
@@ -148,11 +185,10 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 print("🤖 Bot started")
 
 # =========================
-# 🚀 RUN (Render)
+# 🚀 RUN (RENDER)
 # =========================
 if __name__ == "__main__":
-    threading.Thread(
-        target=lambda: web_app.run(host="0.0.0.0", port=10000)
-    ).start()
+    threading.Thread(target=run_web).start()
+    threading.Thread(target=keep_alive_ping).start()
 
     app.run_polling(drop_pending_updates=True)
