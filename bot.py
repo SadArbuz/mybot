@@ -6,6 +6,7 @@ import re
 import asyncio
 COOLDOWN = 40
 
+from datetime import datetime, timedelta
 from flask import Flask
 from telegram import Update, ChatPermissions
 from telegram.ext import (
@@ -200,11 +201,7 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if BAD_TRIGGER in text:
 
-            # 1) удалить сообщение
             await update.message.delete()
-
-            # 2) ВЕЧНЫЙ МУТ (через 100 лет)
-            forever = int(time.time()) + 60 * 60 * 24 * 365 * 100  # 100 лет вперёд
 
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
@@ -215,11 +212,9 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     can_send_other_messages=False,
                     can_add_web_page_previews=False,
                     can_invite_users=False
-                ),
-                until_date=forever
+                )
             )
 
-            # 3) сообщение в чат
             await context.bot.send_message(
                 chat_id=chat_id,
                 text="🚫 Сообщение удалено. Пользователь получил мут."
@@ -232,6 +227,89 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # =========================
+# 🔇 /mute COMMAND
+# =========================
+async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    admins = await context.bot.get_chat_administrators(
+        update.effective_chat.id
+    )
+
+    admin_ids = [admin.user.id for admin in admins]
+
+    if update.effective_user.id not in admin_ids:
+        await update.message.reply_text(
+            "❌ Команда доступна только администраторам."
+        )
+        return
+
+    if not update.message.reply_to_message:
+        await update.message.reply_text(
+            "❌ Ответь на сообщение пользователя.\nПример: /mute 10m"
+        )
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи время.\nПример: /mute 10m"
+        )
+        return
+
+    target = update.message.reply_to_message.from_user
+    duration = context.args[0].lower()
+
+    try:
+        if duration.endswith("m"):
+            delta = timedelta(minutes=int(duration[:-1]))
+
+        elif duration.endswith("h"):
+            delta = timedelta(hours=int(duration[:-1]))
+
+        elif duration.endswith("d"):
+            delta = timedelta(days=int(duration[:-1]))
+
+        else:
+            await update.message.reply_text(
+                "❌ Используй:\n10m = минуты\n2h = часы\n7d = дни"
+            )
+            return
+
+        until_date = datetime.now() + delta
+
+        target_member = await context.bot.get_chat_member(
+            update.effective_chat.id,
+            target.id
+        )
+
+        if target_member.status in ["administrator", "creator"]:
+            await update.message.reply_text(
+                "❌ Нельзя замутить администратора."
+            )
+            return
+
+        await context.bot.restrict_chat_member(
+            chat_id=update.effective_chat.id,
+            user_id=target.id,
+            permissions=ChatPermissions(
+                can_send_messages=False,
+                can_send_polls=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False,
+                can_invite_users=False
+            ),
+            until_date=until_date
+        )
+
+        await update.message.reply_text(
+            f"🔇 {target.first_name} получил мут на {duration}"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(
+            f"❌ Ошибка: {e}"
+        )
+
+# =========================
 # 🤖 BOT SETUP
 # =========================
 app = Application.builder().token(TOKEN).build()
@@ -241,6 +319,7 @@ app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
 app.add_handler(CommandHandler("ovner", ovner))
 app.add_handler(CommandHandler("z", z))
+app.add_handler(CommandHandler("mute", mute))
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
