@@ -64,13 +64,18 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     now = time.time()
-
     last = user_cooldown.get(user.id)
+
+    # cooldown check (ОДИН РАЗ!)
     if last and now - last < COOLDOWN:
-        await update.message.reply_text("⏳ Подожди перед следующим запросом")
+        remaining = int(COOLDOWN - (now - last))
+        await update.message.reply_text(
+            f"⏳ Подожди {remaining} сек перед следующим запросом"
+        )
         return
 
     text = " ".join(context.args).strip()
+
     if not text:
         await update.message.reply_text("Напиши: /ai привет")
         return
