@@ -4,7 +4,7 @@ import requests
 import time
 import re
 import asyncio
-COOLDOWN = 15
+COOLDOWN = 40
 
 from datetime import datetime, timedelta
 from flask import Flask
@@ -36,7 +36,7 @@ if not GROQ_KEY:
 # =========================
 # 🌐 FLASK (KEEP ALIVE SERVER)
 # =========================
-web_app = Flask(__name__)
+web_app = Flask(name)
 
 @web_app.route("/")
 def home():
@@ -75,7 +75,7 @@ def normalize(text: str):
 # 🤖 AI COOLDOWN SYSTEM
 # =========================
 user_cooldown = {}
-COOLDOWN = 15
+COOLDOWN = 40
 COOLDOWN_LIFETIME = 60  # через сколько удалять запись
 
 def clean_cooldowns():
@@ -152,6 +152,7 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "3. Запрещается оскорбление религии, семьи, нации\n"
     "Наказание — Мут ( время зависит от ситуации)\n\n"
     "4. Запрещается оскорбление админов ( легкие, шуточные не учитываются)\n"
+
 "Наказание — Мут/Бан (зависит от ситуации)\n\n"
     "5. Запрещается реклама (в любом виде) без согласования с владельцем чата \n"
     "Наказание — Бан\n\n"
@@ -276,7 +277,7 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         until_date = datetime.now() + delta
 
-        target_member = await context.bot.get_chat_member(
+target_member = await context.bot.get_chat_member(
             update.effective_chat.id,
             target.id
         )
@@ -312,10 +313,8 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # 🤖 BOT SETUP
 # =========================
-async def post_init(app):
-    await app.bot.delete_webhook(drop_pending_updates=True)
+app = Application.builder().token(TOKEN).build()
 
-app = Application.builder().token(TOKEN).post_init(post_init).build()
 app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
@@ -327,5 +326,11 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
 print("🤖 Bot started")
 
-if __name__ == "__main__":
+# =========================
+# 🚀 RUN (RENDER)
+# =========================
+if name == "main":
+    threading.Thread(target=run_web).start()
+    threading.Thread(target=keep_alive_ping).start()
+
     app.run_polling(drop_pending_updates=True)
