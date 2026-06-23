@@ -4,7 +4,7 @@ import requests
 import time
 import re
 import asyncio
-COOLDOWN = 40
+COOLDOWN = 15
 
 from datetime import datetime, timedelta
 from flask import Flask
@@ -75,7 +75,7 @@ def normalize(text: str):
 # 🤖 AI COOLDOWN SYSTEM
 # =========================
 user_cooldown = {}
-COOLDOWN = 40
+COOLDOWN = 15
 COOLDOWN_LIFETIME = 60  # через сколько удалять запись
 
 def clean_cooldowns():
@@ -152,7 +152,7 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "3. Запрещается оскорбление религии, семьи, нации\n"
     "Наказание — Мут ( время зависит от ситуации)\n\n"
     "4. Запрещается оскорбление админов ( легкие, шуточные не учитываются)\n"
-    "Наказание — Мут/Бан (зависит от ситуации)\n\n"
+"Наказание — Мут/Бан (зависит от ситуации)\n\n"
     "5. Запрещается реклама (в любом виде) без согласования с владельцем чата \n"
     "Наказание — Бан\n\n"
     "6. Запрещается отправка треш кружочков (не стоит отправлять расчлененку илм свои/чужие гениталии)\n"
@@ -332,4 +332,4 @@ if __name__ == "__main__":
     threading.Thread(target=run_web).start()
     threading.Thread(target=keep_alive_ping).start()
 
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_update=True)
