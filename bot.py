@@ -312,8 +312,10 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 # 🤖 BOT SETUP
 # =========================
-app = Application.builder().token(TOKEN).build()
+async def post_init(app):
+    await app.bot.delete_webhook(drop_pending_updates=True)
 
+app = Application.builder().token(TOKEN).post_init(post_init).build()
 app.add_handler(CommandHandler("ai", ai))
 app.add_handler(CommandHandler("rules", rules))
 app.add_handler(CommandHandler("arbuz", arbuz))
@@ -325,11 +327,5 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
 print("🤖 Bot started")
 
-# =========================
-# 🚀 RUN (RENDER)
-# =========================
 if __name__ == "__main__":
-    threading.Thread(target=run_web).start()
-    threading.Thread(target=keep_alive_ping).start()
-
-    app.run_polling(drop_pending_update=True)
+    app.run_polling(drop_pending_updates=True)
