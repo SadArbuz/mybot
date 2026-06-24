@@ -6,12 +6,16 @@ from datetime import datetime, timedelta
 
 from telegram import Update, ChatPermissions
 from telegram.ext import (
+
     Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
     filters
 )
+
+from flask import Flask
+from threading import Thread
 
 from groq import Groq
 
@@ -231,6 +235,24 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =========================
+# 🌐 FLASK FOR RENDER
+# =========================
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+        use_reloader=False
+    )
+    
+# =========================
 # 🤖 BOT SETUP
 # =========================
 app = Application.builder().token(TOKEN).build()
@@ -244,7 +266,8 @@ app.add_handler(CommandHandler("mute", mute))
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
-print("🤖 Bot started")
-
 if __name__ == "__main__":
+    Thread(target=run_web).start()
+
+    print("🤖 Bot started")
     app.run_polling()
