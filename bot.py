@@ -38,8 +38,9 @@ client = Groq(api_key=GROQ_KEY)
 # =========================
 # ⏳ COOLDOWN SYSTEM
 # =========================
-COOLDOWN = 40
+COOLDOWN = 15
 user_cooldown = {}
+
 
 def clean_cooldowns():
     now = time.time()
@@ -47,12 +48,14 @@ def clean_cooldowns():
         if now - user_cooldown[user_id] > 60:
             del user_cooldown[user_id]
 
+
 # =========================
 # 🧹 TEXT NORMALIZE
 # =========================
 def normalize(text: str):
     text = text.lower()
     return re.sub(r"[^\wа-я0-9]", "", text)
+
 
 # =========================
 # 🤖 /ai COMMAND
@@ -90,16 +93,25 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = await asyncio.to_thread(
             client.chat.completions.create,
             model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": text}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Ты общаешься в обычном чате. Отвечай на вопросы максимально правдиво, по делу, но с жестким матом и едким подъбом в адрес того, кто спросил. Твой ответ — это всегда ехидная шутка и факты одновременно. Никакой ролевой игры и слова 'пример'. Разрешено стебать даже админов. Запрещены только реальные угрозы насилия и экстремизм."
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ],
         )
 
-        await update.message.reply_text(
-            response.choices[0].message.content
-        )
+        answer = response.choices[0].message.content
+        await update.message.reply_text(answer)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
-        
+
+
 # =========================
 # 📜 /rules COMMAND (ПОЛНЫЕ ПРАВИЛА)
 # =========================
@@ -134,17 +146,20 @@ async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "9. В случае бана можно попросить разбан 1 раз, если нарушение не повторяется.(кроме пунктов 2,5,6.)"
     )
 
+
 # =========================
 # 🍉 /arbuz COMMAND
 # =========================
 async def arbuz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Я ❤️ Арбуза")
 
+
 # =========================
 # 👑 /ovner COMMAND
 # =========================
 async def ovner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Овнер, я ❤️ тебя")
+
 
 # =========================
 # 🎬 /z VIDEO COMMAND
@@ -153,10 +168,12 @@ async def z(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with open("video_2026-06-18_21-17-27.mp4", "rb") as v:
         await update.message.reply_video(video=v)
 
+
 # =========================
 # 🚫 AUTO MODERATION
 # =========================
 BAD_TRIGGER = "dsweroo"
+
 
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
@@ -183,11 +200,11 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🚫 Сообщение удалено. Пользователь получил мут."
         )
 
+
 # =========================
 # 🔇 /mute COMMAND
 # =========================
 async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     admins = await context.bot.get_chat_administrators(update.effective_chat.id)
     admin_ids = [a.user.id for a in admins]
 
@@ -234,14 +251,17 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔇 {target.first_name} замучен на {duration}"
     )
 
+
 # =========================
 # 🌐 FLASK FOR RENDER
 # =========================
 flask_app = Flask(__name__)
 
+
 @flask_app.route("/")
 def home():
     return "Bot is running!"
+
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -251,7 +271,8 @@ def run_web():
         debug=False,
         use_reloader=False
     )
-    
+
+
 # =========================
 # 🤖 BOT SETUP
 # =========================
