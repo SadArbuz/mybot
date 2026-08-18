@@ -92,7 +92,7 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="openai/gpt-oss-20b",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {
                     "role": "system",
