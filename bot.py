@@ -91,9 +91,12 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         response = await asyncio.to_thread(
-            client.chat.completions.create,
-            model="qwen/qwen3.6-27b",
-            messages=[
+    client.chat.completions.create,
+    model="qwen/qwen3.6-27b",
+    reasoning_effort="none",
+    temperature=0.7,
+    max_completion_tokens=300,
+    messages=[
                 {
                     "role": "system",
                     "content": (
