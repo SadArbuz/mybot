@@ -251,6 +251,60 @@ async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔇 {target.first_name} замучен на {duration}"
     )
 
+# =========================
+# 🚫 /ban COMMAND
+# =========================
+async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    # Проверяем, является ли отправитель админом
+    admins = await context.bot.get_chat_administrators(
+        update.effective_chat.id
+    )
+    admin_ids = [a.user.id for a in admins]
+
+    if update.effective_user.id not in admin_ids:
+        await update.message.reply_text(
+            "❌ Эта команда доступна только администраторам."
+        )
+        return
+
+    # Проверяем, есть ли сообщение, на которое отвечают
+    if not update.message.reply_to_message:
+        await update.message.reply_text(
+            "⚠️ Сначала ответь на сообщение пользователя."
+        )
+        return
+
+    target = update.message.reply_to_message.from_user
+
+    # Причина — всё, что написано после /ban
+    reason = " ".join(context.args).strip()
+
+    if not reason:
+        reason = "Нарушение правил чата"
+
+    try:
+        # Отправляем пользователя в бан
+        await context.bot.ban_chat_member(
+            chat_id=update.effective_chat.id,
+            user_id=target.id
+        )
+
+        # Красивое уведомление
+        await update.message.reply_text(
+            "🚫 **ПОЛЬЗОВАТЕЛЬ ЗАБЛОКИРОВАН**\n\n"
+            f"👤 **Пользователь:** {target.first_name}\n"
+            f"📋 **Причина:** {reason}\n\n"
+            "🔒 Пользователь отправлен в чёрный список.",
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(
+            f"❌ Не удалось заблокировать пользователя:\n`{e}`",
+            parse_mode="Markdown"
+        )
+
 
 # =========================
 # 🌐 FLASK FOR RENDER
@@ -284,6 +338,7 @@ app.add_handler(CommandHandler("arbuz", arbuz))
 app.add_handler(CommandHandler("ovner", ovner))
 app.add_handler(CommandHandler("z", z))
 app.add_handler(CommandHandler("mute", mute))
+app.add_handler(CommandHandler("ban", ban))
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
