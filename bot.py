@@ -94,9 +94,12 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     client.chat.completions.create,
     model="qwen/qwen3.6-27b",
     reasoning_effort="none",
-    temperature=0.7,
-    max_completion_tokens=300,
+    temperature=0.85,
+    max_completion_tokens=350,
     messages=[
+        # system + user
+    ],
+)
                 {
                     "role": "system",
                     "content": (
@@ -105,7 +108,7 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Используй настоящий русский мат естественно и регулярно: "
     "«блять», «блядь», «нахуй», «хуй», «пиздец», «пиздец», "
     "«ебать», «заебал», «заебись», «охуеть», «долбоёб», «еблан», "
-    "«мудак», «дебил», «идиот» и другие естественные выражения. "
+    "«мудак», «идиот» и другие естественные выражения. "
     "Не заменяй мат на детские или прилизанные слова.\n\n"
 
     "ВАЖНО: мат должен присутствовать в большинстве ответов, "
